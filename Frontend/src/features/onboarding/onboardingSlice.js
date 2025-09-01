@@ -1,34 +1,71 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-// Async action (later will call backend API)
+// Start onboarding
 export const onboardUserAsync = createAsyncThunk(
   "admin/onboardUser",
-  async (email) => {
-    // Mock API call for now
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    return { email, status: "success" };
+  async ({ firstName, lastName, email, team }, { getState }) => {
+    const token = getState().login.user?.token; // get JWT from login state
+
+    const response = await fetch("http://localhost:5000/api/admin/onboard", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ firstName, lastName, email, team }),
+    });
+
+    if (!response.ok) throw new Error("Failed to start onboarding");
+
+    return await response.json(); // returns { message, logId }
+  }
+);
+
+// Fetch log by ID
+export const fetchOnboardingLogAsync = createAsyncThunk(
+  "admin/fetchOnboardingLog",
+  async (logId, { getState }) => {
+    const token = getState().login.user?.token;
+
+    const response = await fetch(`http://localhost:5000/api/admin/onboard/${logId}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error("Failed to fetch log");
+
+    return await response.json();
   }
 );
 
 const adminSlice = createSlice({
   name: "admin",
   initialState: {
-    status: "idle", // idle | in-progress | success | error
+    status: "idle",
+    logId: null,
     logs: [],
   },
   reducers: {},
   extraReducers: (builder) => {
     builder
+      // Onboard user
       .addCase(onboardUserAsync.pending, (state) => {
         state.status = "in-progress";
+        state.logs = [];
+        state.logId = null;
       })
       .addCase(onboardUserAsync.fulfilled, (state, action) => {
-        state.status = "success";
-        state.logs.push(`✅ User onboarded: ${action.payload.email}`);
+        state.status = "in-progress";
+        state.logId = action.payload.logId;
       })
       .addCase(onboardUserAsync.rejected, (state) => {
         state.status = "error";
-        state.logs.push("❌ Onboarding failed.");
+      })
+
+      // Fetch logs
+      .addCase(fetchOnboardingLogAsync.fulfilled, (state, action) => {
+        state.logs = action.payload.steps || [];
+        state.status = action.payload.status;
       });
   },
 });

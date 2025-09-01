@@ -1,27 +1,39 @@
 import { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { loginUserAsync } from "./loginSlice";
 import { useNavigate } from "react-router-dom";
 
-export default function Login() {
-  const dispatch = useDispatch();
+export default function Signup() {
   const navigate = useNavigate();
 
-  const { status, error } = useSelector((state) => state.login);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName]   = useState("");
+  const [email, setEmail]         = useState("");
+  const [password, setPassword]   = useState("");
+  const [status, setStatus]       = useState("idle");
+  const [error, setError]         = useState(null);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    dispatch(loginUserAsync({ email, password }))
-      .unwrap()
-      .then(() => {
-        navigate("/dashboard"); // redirect if login is successful
-      })
-      .catch(() => {
-        // error handled from Redux
+    setStatus("loading");
+    setError(null);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName, lastName, email, password }),
       });
+
+      if (!response.ok) {
+        throw new Error("Signup failed");
+      }
+
+      await response.json();
+      setStatus("succeeded");
+      navigate("/login"); // redirect after signup
+    } catch (err) {
+      setError(err.message);
+      setStatus("failed");
+    }
   };
 
   return (
@@ -36,29 +48,48 @@ export default function Login() {
               className="mx-auto h-12 w-auto"
             />
             <h2 className="mt-6 text-2xl font-bold tracking-tight text-white">
-              Sign in to your account
+              Create your account
             </h2>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            {/* First Name */}
+            <div>
+              <label className="text-sm font-medium text-gray-200">
+                First Name
+              </label>
+              <input
+                type="text"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="mt-2 block w-full rounded-md bg-gray-700 px-3 py-2 text-white placeholder-gray-400 outline-none ring-1 ring-gray-600 focus:ring-2 focus:ring-indigo-500 sm:text-sm"
+              />
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <label className="text-sm font-medium text-gray-200">
+                Last Name
+              </label>
+              <input
+                type="text"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="mt-2 block w-full rounded-md bg-gray-700 px-3 py-2 text-white placeholder-gray-400 outline-none ring-1 ring-gray-600 focus:ring-2 focus:ring-indigo-500 sm:text-sm"
+              />
+            </div>
+
             {/* Email */}
             <div>
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="email"
-                  className="text-sm font-medium text-gray-200"
-                >
-                  Email address
-                </label>
-                <span className="text-sm text-transparent">Placeholder</span>
-              </div>
+              <label className="text-sm font-medium text-gray-200">
+                Email address
+              </label>
               <input
-                id="email"
-                name="email"
                 type="email"
                 required
-                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-2 block w-full rounded-md bg-gray-700 px-3 py-2 text-white placeholder-gray-400 outline-none ring-1 ring-gray-600 focus:ring-2 focus:ring-indigo-500 sm:text-sm"
@@ -67,26 +98,12 @@ export default function Login() {
 
             {/* Password */}
             <div>
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-200"
-                >
-                  Password
-                </label>
-                <a
-                  href="#"
-                  className="text-sm font-semibold text-indigo-400 hover:text-indigo-300"
-                >
-                  Forgot password?
-                </a>
-              </div>
+              <label className="text-sm font-medium text-gray-200">
+                Password
+              </label>
               <input
-                id="password"
-                name="password"
                 type="password"
                 required
-                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-2 block w-full rounded-md bg-gray-700 px-3 py-2 text-white placeholder-gray-400 outline-none ring-1 ring-gray-600 focus:ring-2 focus:ring-indigo-500 sm:text-sm"
@@ -104,18 +121,18 @@ export default function Login() {
               disabled={status === "loading"}
               className="w-full flex justify-center rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
             >
-              {status === "loading" ? "Signing in..." : "Sign in"}
+              {status === "loading" ? "Signing up..." : "Sign up"}
             </button>
           </form>
 
-          {/* Link to Signup */}
+          {/* Link to Login */}
           <p className="mt-6 text-center text-sm text-gray-400">
-            Don’t have an account?{" "}
+            Already have an account?{" "}
             <button
-              onClick={() => navigate("/signup")}
+              onClick={() => navigate("/")}
               className="font-semibold text-indigo-400 hover:text-indigo-300"
             >
-              Sign up
+              Sign in
             </button>
           </p>
         </div>

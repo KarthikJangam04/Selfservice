@@ -12,12 +12,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../features/login/loginSlice";
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard" },
-  { name: "Onboarding", href: "#" },
-  { name: "Service", href: "#" },
-];
-
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }
@@ -28,12 +22,22 @@ export default function Navbar() {
   const user = useSelector((state) => state.login.user);
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
+    dispatch(logout()); // clears Redux + localStorage
+    navigate("/"); // redirect to login
   };
 
+  // base navigation
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Service", href: "/deploy" },
+  ];
+
+  // only admins get the Onboarding link
+  if (user?.role === "admin") {
+    navigation.splice(1, 0, { name: "Onboarding", href: "/onboarding" });
+  }
+
   return (
-    // make navbar full width across viewport, dark background, fixed at top
     <Disclosure
       as="nav"
       className="fixed inset-x-0 top-0 z-50 w-screen bg-gray-900/95 backdrop-blur-sm border-b border-white/5"
@@ -42,6 +46,7 @@ export default function Navbar() {
         <>
           <div className="w-full px-6">
             <div className="flex h-16 items-center justify-between">
+              {/* Mobile menu button */}
               <div className="flex items-center sm:hidden">
                 <DisclosureButton className="inline-flex items-center justify-center rounded-md p-2 text-gray-300 hover:bg-white/5 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
                   <Bars3Icon
@@ -55,6 +60,7 @@ export default function Navbar() {
                 </DisclosureButton>
               </div>
 
+              {/* Logo + Navigation */}
               <div className="flex flex-1 items-center justify-start gap-6">
                 <div className="flex items-center">
                   <img
@@ -84,6 +90,7 @@ export default function Navbar() {
                 </div>
               </div>
 
+              {/* Right side actions */}
               <div className="flex items-center gap-4">
                 <button
                   type="button"
@@ -96,8 +103,13 @@ export default function Navbar() {
                 <Menu as="div" className="relative ml-3">
                   <MenuButton className="relative flex rounded-full focus:outline-none">
                     <img
-                      alt=""
-                      src=""
+                      alt="profile"
+                      src={
+                        user?.avatar ||
+                        `https://ui-avatars.com/api/?name=${
+                          user?.firstName || user?.name || "User"
+                        }`
+                      }
                       className="h-8 w-8 rounded-full bg-gray-800"
                     />
                   </MenuButton>
@@ -105,7 +117,7 @@ export default function Navbar() {
                   <MenuItems className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-gray-800 py-1 shadow-lg ring-1 ring-black ring-opacity-50 focus:outline-none">
                     <MenuItem>
                       <div className="px-4 py-2 text-sm text-gray-300">
-                        {user?.name || "Guest"}
+                        {user?.firstName || user?.name || "Guest"}
                       </div>
                     </MenuItem>
                     <MenuItem>
@@ -122,6 +134,7 @@ export default function Navbar() {
             </div>
           </div>
 
+          {/* Mobile menu panel */}
           <DisclosurePanel className="sm:hidden bg-gray-900 border-t border-white/5">
             <div className="space-y-1 px-4 pt-20 pb-3">
               {navigation.map((item) => (
