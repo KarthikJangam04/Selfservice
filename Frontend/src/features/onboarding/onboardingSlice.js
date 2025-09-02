@@ -2,72 +2,63 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 // Start onboarding
 export const onboardUserAsync = createAsyncThunk(
-  "admin/onboardUser",
-  async ({ firstName, lastName, email, team }, { getState }) => {
-    const token = getState().login.user?.token; // get JWT from login state
+  "onboarding/onboardUser",
+  async ({ firstName, lastName, email, team }, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().login.token; // ✅ fixed (not user?.token)
 
-    const response = await fetch("http://localhost:5000/api/admin/onboard", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ firstName, lastName, email, team }),
-    });
+      const response = await fetch("http://localhost:5000/api/onboarding", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // ✅ send correct token
+        },
+        body: JSON.stringify({ firstName, lastName, email, team }),
+      });
 
-    if (!response.ok) throw new Error("Failed to start onboarding");
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Failed to start onboarding");
+      }
 
-    return await response.json(); // returns { message, logId }
+      return await response.json(); // { message, status, logs }
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
   }
 );
 
-// Fetch log by ID
-export const fetchOnboardingLogAsync = createAsyncThunk(
-  "admin/fetchOnboardingLog",
-  async (logId, { getState }) => {
-    const token = getState().login.user?.token;
-
-    const response = await fetch(`http://localhost:5000/api/admin/onboard/${logId}`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!response.ok) throw new Error("Failed to fetch log");
-
-    return await response.json();
-  }
-);
-
-const adminSlice = createSlice({
-  name: "admin",
+const onboardingSlice = createSlice({
+  name: "onboarding",
   initialState: {
     status: "idle",
-    logId: null,
     logs: [],
+    error: null,
   },
-  reducers: {},
+  reducers: {
+    resetOnboarding: (state) => {
+      state.status = "idle";
+      state.logs = [];
+      state.error = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
-      // Onboard user
       .addCase(onboardUserAsync.pending, (state) => {
         state.status = "in-progress";
         state.logs = [];
-        state.logId = null;
+        state.error = null;
       })
       .addCase(onboardUserAsync.fulfilled, (state, action) => {
-        state.status = "in-progress";
-        state.logId = action.payload.logId;
-      })
-      .addCase(onboardUserAsync.rejected, (state) => {
-        state.status = "error";
-      })
-
-      // Fetch logs
-      .addCase(fetchOnboardingLogAsync.fulfilled, (state, action) => {
-        state.logs = action.payload.steps || [];
         state.status = action.payload.status;
+        state.logs = action.payload.logs;
+      })
+      .addCase(onboardUserAsync.rejected, (state, action) => {
+        state.status = "error";
+        state.error = action.payload;
       });
   },
 });
 
-export default adminSlice.reducer;
+export const { resetOnboarding } = onboardingSlice.actions;
+export default onboardingSlice.reducer;

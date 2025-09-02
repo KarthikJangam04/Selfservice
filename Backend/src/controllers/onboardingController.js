@@ -38,28 +38,28 @@ export const onboardUser = async (req, res) => {
     try {
       const azureResult = await simulateStep("Azure AD user created", 1000);
       onboarding.steps[0].status = "success";
-      logs.push(`${azureResult}`);
+      logs.push(`✅ ${azureResult}`);
     } catch (err) {
       onboarding.steps[0].status = "error";
-      logs.push(`${err}`);
+      logs.push(`❌ ${err}`);
     }
 
     try {
       const vpnResult = await simulateStep("OpenVPN access granted", 1000);
       onboarding.steps[1].status = "success";
-      logs.push(`${vpnResult}`);
+      logs.push(`✅ ${vpnResult}`);
     } catch (err) {
       onboarding.steps[1].status = "error";
-      logs.push(`${err}`);
+      logs.push(`❌ ${err}`);
     }
 
     try {
       const githubResult = await simulateStep("GitHub invite sent", 1000);
       onboarding.steps[2].status = "success";
-      logs.push(`${githubResult}`);
+      logs.push(`✅ ${githubResult}`);
     } catch (err) {
       onboarding.steps[2].status = "error";
-      logs.push(`${err}`);
+      logs.push(`❌ ${err}`);
     }
 
     onboarding.status = onboarding.steps.every((s) => s.status === "success")
