@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { onboardUserAsync, resetOnboarding } from "./onboardingSlice";
+import {
+  onboardUserAsync,
+  resetOnboarding,
+  fetchOnboardingStatusAsync,
+} from "./onboardingSlice";
 import Navbar from "../../components/Navbar";
+import { Loader2, CheckCircle, XCircle } from "lucide-react"; // ✅ professional icons
 
 export default function Onboarding() {
   const dispatch = useDispatch();
-  const { status, logs, error } = useSelector((state) => state.onboarding);
+  const { status, steps, error, onboardingId } = useSelector(
+    (state) => state.onboarding
+  );
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -25,6 +32,66 @@ export default function Onboarding() {
     setEmail("");
     setTeam("Select");
     dispatch(resetOnboarding());
+  };
+
+  // Poll for onboarding progress
+  useEffect(() => {
+    let interval;
+    if (onboardingId && status === "in-progress") {
+      interval = setInterval(() => {
+        dispatch(fetchOnboardingStatusAsync(onboardingId));
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [dispatch, onboardingId, status]);
+
+  const getStepUI = (step, i) => {
+    const isPending = step.status === "pending";
+    const isSuccess = step.status === "success";
+    const isError = step.status === "error";
+
+    return (
+      <div
+        key={i}
+        className="bg-gray-800 p-4 rounded-lg shadow-md flex flex-col space-y-2"
+      >
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium">{step.action}</span>
+          {isPending && <Loader2 className="h-5 w-5 text-blue-400 animate-spin" />}
+          {isSuccess && <CheckCircle className="h-5 w-5 text-emerald-400" />}
+          {isError && <XCircle className="h-5 w-5 text-red-400" />}
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full h-2 bg-gray-700 rounded overflow-hidden">
+          <div
+            className={`h-2 transition-all duration-500 ${
+              isPending
+                ? "bg-blue-500 animate-pulse w-1/2"
+                : isSuccess
+                ? "bg-emerald-500 w-full"
+                : isError
+                ? "bg-red-500 w-full"
+                : "w-0"
+            }`}
+          ></div>
+        </div>
+
+        {/* VPN Download link */}
+        {step.action.includes("VPN") &&
+          step.status === "success" &&
+          step.downloadUrl && (
+            <a
+              href={step.downloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 text-xs underline"
+            >
+              Download VPN config
+            </a>
+          )}
+      </div>
+    );
   };
 
   return (
@@ -47,6 +114,7 @@ export default function Onboarding() {
             onSubmit={handleSubmit}
             className="mx-auto mt-16 max-w-xl space-y-6"
           >
+            {/* Inputs */}
             <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-semibold text-white">
@@ -80,7 +148,7 @@ export default function Onboarding() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="newuser@company.com"
+                  placeholder="newuser@tatvacare.in"
                   className="mt-2 block w-full rounded-md bg-white/5 px-3 py-2 text-white border border-gray-700 focus:border-indigo-500"
                   required
                 />
@@ -122,37 +190,23 @@ export default function Onboarding() {
           </form>
         )}
 
-        {/* Logs */}
-        <div className="mx-auto mt-8 max-w-xl">
-          {logs.length > 0 && (
-            <div className="bg-gray-800 rounded-md p-3 text-sm space-y-2">
-              {logs.map((log, i) => (
-                <p
-                  key={i}
-                  className={
-                    log.includes("✅")
-                      ? "text-green-400"
-                      : log.includes("❌")
-                      ? "text-red-400"
-                      : "text-yellow-400"
-                  }
-                >
-                  {log}
-                </p>
-              ))}
-            </div>
-          )}
-          {logs.length > 0 && (
-            <div className="mt-4 flex justify-center">
-              <button
-                onClick={handleReset}
-                className="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-sm text-white"
-              >
-                Start New Onboarding
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Step cards */}
+        {Array.isArray(steps) && steps.length > 0 && (
+          <div className="mx-auto mt-8 max-w-2xl space-y-4">
+            {steps.map((step, i) => getStepUI(step, i))}
+          </div>
+        )}
+
+        {Array.isArray(steps) && steps.length > 0 && status !== "in-progress" && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-sm text-white"
+            >
+              Start New Onboarding
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );
